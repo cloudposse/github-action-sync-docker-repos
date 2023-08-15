@@ -1,0 +1,69 @@
+name: "GitHub Action for Syncing Docker Repositories"
+description: "A GitHub Action for Syncing Docker Repositories"
+author: hello@cloudposse.com
+branding:
+  icon: "terminal"
+  color: "white"
+inputs:
+  src:
+    description: The source repository to sync from.
+    required: true
+  src-crednetials:
+    description: The source repository credentials.
+    required: false
+  dest:
+    description: The destination repository to sync to.
+    required: true
+  dest-credentials:
+    description: The destination repository credentials.
+    required: false
+  override-arch:
+    description: Override the architecture of the src image.
+    required: false
+  override-os:
+    description: Override the operating system of the src image.
+    required: false
+  override-multi-arch:
+    description: Override the architecture and operating system of the src image.
+    required: false
+    default: all
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      run: sudo apt-get update && sudo apt-get -y install skopeo
+
+    - id: sync
+      shell: bash
+      run: |
+        SRC="${{ inputs.src }}"
+        SRC_CREDS="${{ inputs.srcCredentials }}"
+        DEST="${{ inputs.dest }}"
+        DEST_CREDS="${{ inputs.destCredentials }}"
+        OVERRIDE_ARCH="${{ inputs.overrideArch }}"
+        OVERRIDE_OS="${{ inputs.overrideOS }}"
+
+        skopeo_command="skopeo sync --src \"$SRC\" --dest \"$DEST\""
+
+        if [ -n "$SRC_CREDS" ]; then
+          skopeo_command="$skopeo_command --src-creds \"$SRC_CREDS\""
+        fi
+
+        if [ -n "$DEST_CREDS" ]; then
+          skopeo_command="$skopeo_command --dest-creds \"$DEST_CREDS\""
+        fi
+
+        if [ -n "$OVERRIDE_ARCH" ]; then
+          skopeo_command="$skopeo_command --override-arch \"$OVERRIDE_ARCH\""
+        fi
+
+        if [ -n "$OVERRIDE_OS" ]; then
+          skopeo_command="$skopeo_command --override-os \"$OVERRIDE_OS\""
+        fi
+
+        if [ -n "$OVERRIDE_MULTI_ARCH" ]; then
+          skopeo_command="$skopeo_command --multi-arch \"$OVERRIDE_MULTI_ARCH\""
+        fi
+
+        echo "Running command: $skopeo_command"
+        eval "$skopeo_command"
