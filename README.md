@@ -1,6 +1,6 @@
 
 <!-- markdownlint-disable -->
-# github-action-atmos-get-setting [![Latest Release](https://img.shields.io/github/release/cloudposse/github-action-atmos-get-setting.svg)](https://github.com/cloudposse/github-action-atmos-get-setting/releases/latest) [![Slack Community](https://slack.cloudposse.com/badge.svg)](https://slack.cloudposse.com)
+# github-action-sync-docker-repos [![Latest Release](https://img.shields.io/github/release/cloudposse/github-action-sync-docker-repos.svg)](https://github.com/cloudposse/github-action-sync-docker-repos/releases/latest) [![Slack Community](https://slack.cloudposse.com/badge.svg)](https://slack.cloudposse.com)
 <!-- markdownlint-restore -->
 
 [![README Header][readme_header_img]][readme_header_link]
@@ -28,7 +28,7 @@
 
 -->
 
-GitHub Action to retreive a setting from [atmos](https://github.com/cloudposse/atmos) configuration.
+GitHub Action to sync two docker repositories.
 
 ---
 
@@ -58,7 +58,7 @@ It's 100% Open Source and licensed under the [APACHE2](LICENSE).
 
 ## Introduction
 
-GitHub Action to retreive a setting from [atmos](https://github.com/cloudposse/atmos) configuration.
+GitHub Action to sync two docker repositories
 
 
 
@@ -68,40 +68,35 @@ GitHub Action to retreive a setting from [atmos](https://github.com/cloudposse/a
 
 
 
-```
-# Example stacks/dev.yaml
-components:
-  terraform:
-    foo:
-      settings:
-        secrets-arn: arn:aws:secretsmanager:us-east-1:000000000000:secret:MySecret-PlMes3
-      vars:
-        foo: bar
-```
+
+Below is an example workflow that uses the `github-action-sync-docker-repos` action to sync a Docker Hub repository
+with an AWS ECR repository.
 
 ```yaml
-  name: Pull Request
-  on:
-    pull_request:
-      branches: [ 'main' ]
-      types: [opened, synchronize, reopened, closed, labeled, unlabeled]
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        id: login-aws
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-  jobs:
-    context:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Get Atmos Setting for Secret ARN
-          uses: cloudposse/github-action-atmos-get-setting@main
-          id: example
-          with:
-            component: foo
-            stack: core-ue1-dev
-            settings-path: secrets-arn
+      - name: Login to Amazon ECR Private
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: "true"
 
-        - name: Set ENV Vars with AWS Secrets Manager Secret
-          uses: aws-actions/aws-secretsmanager-get-secrets@v1
-          with:
-            secret-ids: ${{ steps.example.outputs.value }}
+      - name: sync
+        uses: cloudposse/github-action-sync-docker-repos@main
+        with:
+          src: busybox
+          dest: 111111111111.dkr.ecr.us-east-1.amazonaws.com
+          dest-credentials: "${{ steps.login-ecr.outputs.docker_username_111111111111_dkr_ecr_us_east_1_amazonaws_com }}:${{ steps.login-ecr.outputs.docker_password_111111111111_dkr_ecr_us_east_1_amazonaws_com }}"
 ```
 
 
@@ -115,23 +110,22 @@ components:
 
 | Name | Description | Default | Required |
 |------|-------------|---------|----------|
-| component | The atmos component extract the settings for. | N/A | true |
-| settings-path | The settings path using JSONPath expressions. | N/A | true |
-| stack | The atmos stack extract the settings for. | N/A | true |
+| dest | The destination repository to sync to. | N/A | true |
+| dest-credentials | The destination repository credentials. | N/A | false |
+| override-arch | Override the architecture of the src image. | N/A | false |
+| override-multi-arch | If one of the images in src refers to a list of images, instead of copying just the image which matches the<br>current OS and architecture, attempt to copy all of the images in the list, and the list itself.<br> | true | false |
+| override-os | Override the operating system of the src image. | N/A | false |
+| src | The source repository to sync from. | N/A | true |
+| src-credentials | The source repository credentials. | N/A | false |
 
 
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| value | The value of the settings |
 <!-- markdownlint-restore -->
 
 
 
 ## Share the Love
 
-Like this project? Please give it a ★ on [our GitHub](https://github.com/cloudposse/github-action-atmos-get-setting)! (it helps us **a lot**)
+Like this project? Please give it a ★ on [our GitHub](https://github.com/cloudposse/github-action-sync-docker-repos)! (it helps us **a lot**)
 
 Are you using this project or any of our other projects? Consider [leaving a testimonial][testimonial]. =)
 
@@ -154,7 +148,7 @@ For additional context, refer to some of these links.
 
 **Got a question?** We got answers.
 
-File a GitHub [issue](https://github.com/cloudposse/github-action-atmos-get-setting/issues), send us an [email][email] or join our [Slack Community][slack].
+File a GitHub [issue](https://github.com/cloudposse/github-action-sync-docker-repos/issues), send us an [email][email] or join our [Slack Community][slack].
 
 [![README Commercial Support][readme_commercial_support_img]][readme_commercial_support_link]
 
@@ -202,7 +196,7 @@ Sign up for [our newsletter][newsletter] that covers everything on our technolog
 
 ### Bug Reports & Feature Requests
 
-Please use the [issue tracker](https://github.com/cloudposse/github-action-atmos-get-setting/issues) to report any bugs or file feature requests.
+Please use the [issue tracker](https://github.com/cloudposse/github-action-sync-docker-repos/issues) to report any bugs or file feature requests.
 
 ### Developing
 
@@ -279,46 +273,44 @@ Check out [our other projects][github], [follow us on twitter][twitter], [apply 
 ### Contributors
 
 <!-- markdownlint-disable -->
-|  [![Matt Calhoun][mcalhoun_avatar]][mcalhoun_homepage]<br/>[Matt Calhoun][mcalhoun_homepage] | [![Daniel Miller][milldr_avatar]][milldr_homepage]<br/>[Daniel Miller][milldr_homepage] |
-|---|---|
+|  [![Matt Calhoun][mcalhoun_avatar]][mcalhoun_homepage]<br/>[Matt Calhoun][mcalhoun_homepage] |
+|---|
 <!-- markdownlint-restore -->
 
   [mcalhoun_homepage]: https://github.com/mcalhoun
   [mcalhoun_avatar]: https://img.cloudposse.com/150x150/https://github.com/mcalhoun.png
-  [milldr_homepage]: https://github.com/milldr
-  [milldr_avatar]: https://img.cloudposse.com/150x150/https://github.com/milldr.png
 
 [![README Footer][readme_footer_img]][readme_footer_link]
 [![Beacon][beacon]][website]
 <!-- markdownlint-disable -->
   [logo]: https://cloudposse.com/logo-300x69.svg
-  [docs]: https://cpco.io/docs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=docs
-  [website]: https://cpco.io/homepage?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=website
-  [github]: https://cpco.io/github?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=github
-  [jobs]: https://cpco.io/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=jobs
-  [hire]: https://cpco.io/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=hire
-  [slack]: https://cpco.io/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=slack
-  [linkedin]: https://cpco.io/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=linkedin
-  [twitter]: https://cpco.io/twitter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=twitter
-  [testimonial]: https://cpco.io/leave-testimonial?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=testimonial
-  [office_hours]: https://cloudposse.com/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=office_hours
-  [newsletter]: https://cpco.io/newsletter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=newsletter
-  [discourse]: https://ask.sweetops.com/?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=discourse
-  [email]: https://cpco.io/email?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=email
-  [commercial_support]: https://cpco.io/commercial-support?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=commercial_support
-  [we_love_open_source]: https://cpco.io/we-love-open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=we_love_open_source
-  [terraform_modules]: https://cpco.io/terraform-modules?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=terraform_modules
+  [docs]: https://cpco.io/docs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=docs
+  [website]: https://cpco.io/homepage?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=website
+  [github]: https://cpco.io/github?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=github
+  [jobs]: https://cpco.io/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=jobs
+  [hire]: https://cpco.io/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=hire
+  [slack]: https://cpco.io/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=slack
+  [linkedin]: https://cpco.io/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=linkedin
+  [twitter]: https://cpco.io/twitter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=twitter
+  [testimonial]: https://cpco.io/leave-testimonial?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=testimonial
+  [office_hours]: https://cloudposse.com/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=office_hours
+  [newsletter]: https://cpco.io/newsletter?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=newsletter
+  [discourse]: https://ask.sweetops.com/?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=discourse
+  [email]: https://cpco.io/email?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=email
+  [commercial_support]: https://cpco.io/commercial-support?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=commercial_support
+  [we_love_open_source]: https://cpco.io/we-love-open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=we_love_open_source
+  [terraform_modules]: https://cpco.io/terraform-modules?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=terraform_modules
   [readme_header_img]: https://cloudposse.com/readme/header/img
-  [readme_header_link]: https://cloudposse.com/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=readme_header_link
+  [readme_header_link]: https://cloudposse.com/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=readme_header_link
   [readme_footer_img]: https://cloudposse.com/readme/footer/img
-  [readme_footer_link]: https://cloudposse.com/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=readme_footer_link
+  [readme_footer_link]: https://cloudposse.com/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=readme_footer_link
   [readme_commercial_support_img]: https://cloudposse.com/readme/commercial-support/img
-  [readme_commercial_support_link]: https://cloudposse.com/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-atmos-get-setting&utm_content=readme_commercial_support_link
-  [share_twitter]: https://twitter.com/intent/tweet/?text=github-action-atmos-get-setting&url=https://github.com/cloudposse/github-action-atmos-get-setting
-  [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=github-action-atmos-get-setting&url=https://github.com/cloudposse/github-action-atmos-get-setting
-  [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudposse/github-action-atmos-get-setting
-  [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudposse/github-action-atmos-get-setting
-  [share_googleplus]: https://plus.google.com/share?url=https://github.com/cloudposse/github-action-atmos-get-setting
-  [share_email]: mailto:?subject=github-action-atmos-get-setting&body=https://github.com/cloudposse/github-action-atmos-get-setting
-  [beacon]: https://ga-beacon.cloudposse.com/UA-76589703-4/cloudposse/github-action-atmos-get-setting?pixel&cs=github&cm=readme&an=github-action-atmos-get-setting
+  [readme_commercial_support_link]: https://cloudposse.com/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudposse/github-action-sync-docker-repos&utm_content=readme_commercial_support_link
+  [share_twitter]: https://twitter.com/intent/tweet/?text=github-action-sync-docker-repos&url=https://github.com/cloudposse/github-action-sync-docker-repos
+  [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=github-action-sync-docker-repos&url=https://github.com/cloudposse/github-action-sync-docker-repos
+  [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudposse/github-action-sync-docker-repos
+  [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudposse/github-action-sync-docker-repos
+  [share_googleplus]: https://plus.google.com/share?url=https://github.com/cloudposse/github-action-sync-docker-repos
+  [share_email]: mailto:?subject=github-action-sync-docker-repos&body=https://github.com/cloudposse/github-action-sync-docker-repos
+  [beacon]: https://ga-beacon.cloudposse.com/UA-76589703-4/cloudposse/github-action-sync-docker-repos?pixel&cs=github&cm=readme&an=github-action-sync-docker-repos
 <!-- markdownlint-restore -->

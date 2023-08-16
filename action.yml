@@ -8,7 +8,7 @@ inputs:
   src:
     description: The source repository to sync from.
     required: true
-  src-crednetials:
+  src-credentials:
     description: The source repository credentials.
     required: false
   dest:
@@ -24,9 +24,11 @@ inputs:
     description: Override the operating system of the src image.
     required: false
   override-multi-arch:
-    description: Override the architecture and operating system of the src image.
+    description: |
+      If one of the images in src refers to a list of images, instead of copying just the image which matches the
+      current OS and architecture, attempt to copy all of the images in the list, and the list itself.
     required: false
-    default: all
+    default: "true"
 runs:
   using: "composite"
   steps:
@@ -37,13 +39,14 @@ runs:
       shell: bash
       run: |
         SRC="${{ inputs.src }}"
-        SRC_CREDS="${{ inputs.srcCredentials }}"
+        SRC_CREDS="${{ inputs.src-credentials }}"
         DEST="${{ inputs.dest }}"
-        DEST_CREDS="${{ inputs.destCredentials }}"
-        OVERRIDE_ARCH="${{ inputs.overrideArch }}"
-        OVERRIDE_OS="${{ inputs.overrideOS }}"
+        DEST_CREDS="${{ inputs.dest-credentials }}"
+        OVERRIDE_ARCH="${{ inputs.override-arch }}"
+        OVERRIDE_OS="${{ inputs.override-os }}"
+        OVERRIDE_MULTI_ARCH="${{ inputs.override-multi-arch }}"
 
-        skopeo_command="skopeo sync --src \"$SRC\" --dest \"$DEST\""
+        skopeo_command="skopeo sync --src docker --dest docker \"$SRC\" \"$DEST\""
 
         if [ -n "$SRC_CREDS" ]; then
           skopeo_command="$skopeo_command --src-creds \"$SRC_CREDS\""
@@ -61,8 +64,8 @@ runs:
           skopeo_command="$skopeo_command --override-os \"$OVERRIDE_OS\""
         fi
 
-        if [ -n "$OVERRIDE_MULTI_ARCH" ]; then
-          skopeo_command="$skopeo_command --multi-arch \"$OVERRIDE_MULTI_ARCH\""
+        if [ "$OVERRIDE_MULTI_ARCH" == "true" ]; then
+          skopeo_command="$skopeo_command --all"
         fi
 
         echo "Running command: $skopeo_command"
