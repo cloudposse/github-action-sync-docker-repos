@@ -75,8 +75,7 @@ usage: |-
             dest-credentials: "${{ steps.login-ecr.outputs.docker_username_111111111111_dkr_ecr_us_east_1_amazonaws_com }}:${{ steps.login-ecr.outputs.docker_password_111111111111_dkr_ecr_us_east_1_amazonaws_com }}"
   ```
 
-include:
-  - "docs/github-action.md"
+include: []
 
 # Contributors to this project
 contributors:
